@@ -1,0 +1,73 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: ssrf-proxy-config
+  namespace: dify
+data:
+  squid.conf.template: |
+    # Squid proxy configuration
+    http_port ${HTTP_PORT}
+    
+    # Basic access control
+    acl localnet src 10.0.0.0/8
+    acl localnet src 172.16.0.0/12
+    acl localnet src 192.168.0.0/16
+    acl localnet src fc00::/7
+    acl localnet src fe80::/10
+    acl SSL_ports port 443
+    acl Safe_ports port 80
+    acl Safe_ports port 443
+    acl CONNECT method CONNECT
+    
+    # Deny requests to certain unsafe ports
+    http_access deny !Safe_ports
+    http_access deny CONNECT !SSL_ports
+    
+    # Allow localhost manager access
+    http_access allow localhost manager
+    http_access deny manager
+    
+    # Allow access from local networks
+    http_access allow localnet
+    http_access allow localhost
+    
+    # Deny all other access to this proxy
+    http_access deny all
+    
+    # Cache directory
+    cache_dir ufs /var/spool/squid 100 16 256
+    
+    # Log access
+    access_log /var/log/squid/access.log squid
+    
+    # Reverse proxy configuration for sandbox
+    http_port ${REVERSE_PROXY_PORT} accel defaultsite=${SANDBOX_HOST}:${SANDBOX_PORT}
+    cache_peer ${SANDBOX_HOST} parent ${SANDBOX_PORT} 0 no-query originserver
+    acl reverse_proxy_sites dstdomain ${SANDBOX_HOST}
+    http_access allow reverse_proxy_sites
+    
+    # Coredump directory
+    coredump_dir ${COREDUMP_DIR}
+    
+    # Refresh patterns
+    refresh_pattern ^ftp:      1440    20%     10080
+    refresh_pattern ^gopher:   1440    0%      1440
+    refresh_pattern -i (/cgi-bin/|\?) 0 0%      0
+    refresh_pattern .          0       20%     4320
+  
+  docker-entrypoint.sh: |
+    #!/bin/bash
+    set -e
+    
+    # Replace environment variables in the configuration template
+    envsubst < /etc/squid/squid.conf.template > /etc/squid/squid.conf
+    
+    # Create cache directory if it doesn't exist
+    mkdir -p ${COREDUMP_DIR}
+    chown -R squid:squid ${COREDUMP_DIR}
+    
+    # Initialize cache directory
+    squid -z
+    
+    # Start Squid in foreground
+    exec squid -f /etc/squid/squid.conf -N

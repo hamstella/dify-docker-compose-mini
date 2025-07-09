@@ -1,0 +1,162 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: plugin-daemon
+  namespace: dify
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: plugin-daemon
+      component: plugin-manager
+  template:
+    metadata:
+      labels:
+        app: plugin-daemon
+        component: plugin-manager
+    spec:
+      containers:
+      - name: plugin-daemon
+        image: langgenius/dify-plugin-daemon:0.1.3-local
+        ports:
+        - containerPort: 5002
+          name: daemon
+        - containerPort: 5003
+          name: debugging
+        env:
+        - name: DB_DATABASE
+          valueFrom:
+            configMapKeyRef:
+              name: dify-config
+              key: DB_PLUGIN_DATABASE
+        - name: SERVER_PORT
+          valueFrom:
+            configMapKeyRef:
+              name: dify-config
+              key: PLUGIN_DAEMON_PORT
+        - name: SERVER_KEY
+          valueFrom:
+            secretKeyRef:
+              name: dify-secret
+              key: PLUGIN_DAEMON_KEY
+        - name: MAX_PLUGIN_PACKAGE_SIZE
+          valueFrom:
+            configMapKeyRef:
+              name: dify-config
+              key: PLUGIN_MAX_PACKAGE_SIZE
+        - name: PPROF_ENABLED
+          valueFrom:
+            configMapKeyRef:
+              name: dify-config
+              key: PLUGIN_PPROF_ENABLED
+        - name: DIFY_INNER_API_URL
+          valueFrom:
+            configMapKeyRef:
+              name: dify-config
+              key: PLUGIN_DIFY_INNER_API_URL
+        - name: DIFY_INNER_API_KEY
+          valueFrom:
+            secretKeyRef:
+              name: dify-secret
+              key: PLUGIN_DIFY_INNER_API_KEY
+        - name: PLUGIN_REMOTE_INSTALLING_HOST
+          valueFrom:
+            configMapKeyRef:
+              name: dify-config
+              key: PLUGIN_DEBUGGING_HOST
+        - name: PLUGIN_REMOTE_INSTALLING_PORT
+          valueFrom:
+            configMapKeyRef:
+              name: dify-config
+              key: PLUGIN_DEBUGGING_PORT
+        - name: PLUGIN_WORKING_PATH
+          valueFrom:
+            configMapKeyRef:
+              name: dify-config
+              key: PLUGIN_WORKING_PATH
+        - name: FORCE_VERIFYING_SIGNATURE
+          valueFrom:
+            configMapKeyRef:
+              name: dify-config
+              key: FORCE_VERIFYING_SIGNATURE
+        - name: PYTHON_ENV_INIT_TIMEOUT
+          valueFrom:
+            configMapKeyRef:
+              name: dify-config
+              key: PLUGIN_PYTHON_ENV_INIT_TIMEOUT
+        - name: PLUGIN_MAX_EXECUTION_TIMEOUT
+          valueFrom:
+            configMapKeyRef:
+              name: dify-config
+              key: PLUGIN_MAX_EXECUTION_TIMEOUT
+        - name: PIP_MIRROR_URL
+          value: ""
+        - name: PLUGIN_STORAGE_TYPE
+          valueFrom:
+            configMapKeyRef:
+              name: dify-config
+              key: PLUGIN_STORAGE_TYPE
+        - name: PLUGIN_STORAGE_LOCAL_ROOT
+          valueFrom:
+            configMapKeyRef:
+              name: dify-config
+              key: PLUGIN_STORAGE_LOCAL_ROOT
+        - name: PLUGIN_INSTALLED_PATH
+          valueFrom:
+            configMapKeyRef:
+              name: dify-config
+              key: PLUGIN_INSTALLED_PATH
+        - name: PLUGIN_PACKAGE_CACHE_PATH
+          valueFrom:
+            configMapKeyRef:
+              name: dify-config
+              key: PLUGIN_PACKAGE_CACHE_PATH
+        - name: PLUGIN_MEDIA_CACHE_PATH
+          valueFrom:
+            configMapKeyRef:
+              name: dify-config
+              key: PLUGIN_MEDIA_CACHE_PATH
+        - name: SECRET_KEY
+          valueFrom:
+            secretKeyRef:
+              name: dify-secret
+              key: SECRET_KEY
+        - name: DB_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: dify-secret
+              key: DB_PASSWORD
+        - name: REDIS_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: dify-secret
+              key: REDIS_PASSWORD
+        envFrom:
+        - configMapRef:
+            name: dify-config
+        volumeMounts:
+        - name: plugin-storage
+          mountPath: /app/storage
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 5002
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 5002
+          initialDelaySeconds: 15
+          periodSeconds: 5
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "100m"
+          limits:
+            memory: "1Gi"
+            cpu: "500m"
+      volumes:
+      - name: plugin-storage
+        persistentVolumeClaim:
+          claimName: plugin-storage

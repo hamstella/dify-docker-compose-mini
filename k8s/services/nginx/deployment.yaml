@@ -1,0 +1,83 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nginx
+  namespace: dify
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: nginx
+      component: gateway
+  template:
+    metadata:
+      labels:
+        app: nginx
+        component: gateway
+    spec:
+      containers:
+      - name: nginx
+        image: nginx:latest
+        ports:
+        - containerPort: 80
+          name: http
+        - containerPort: 443
+          name: https
+        env:
+        - name: NGINX_WORKER_PROCESSES
+          value: "auto"
+        - name: NGINX_KEEPALIVE_TIMEOUT
+          value: "65"
+        - name: NGINX_CLIENT_MAX_BODY_SIZE
+          value: "100M"
+        - name: NGINX_PROXY_READ_TIMEOUT
+          value: "3600s"
+        - name: NGINX_PROXY_SEND_TIMEOUT
+          value: "3600s"
+        command: ["/bin/sh"]
+        args: ["-c", "cp /config/docker-entrypoint.sh /docker-entrypoint.sh && chmod +x /docker-entrypoint.sh && /docker-entrypoint.sh"]
+        volumeMounts:
+        - name: config
+          mountPath: /config
+        - name: nginx-template
+          mountPath: /etc/nginx/nginx.conf.template
+          subPath: nginx.conf.template
+        - name: proxy-template
+          mountPath: /etc/nginx/proxy.conf.template
+          subPath: proxy.conf.template
+        - name: default-conf
+          mountPath: /etc/nginx/conf.d/default.conf
+          subPath: default.conf
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 80
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 80
+          initialDelaySeconds: 5
+          periodSeconds: 5
+        resources:
+          requests:
+            memory: "64Mi"
+            cpu: "50m"
+          limits:
+            memory: "128Mi"
+            cpu: "200m"
+      volumes:
+      - name: config
+        configMap:
+          name: nginx-config
+          defaultMode: 0755
+      - name: nginx-template
+        configMap:
+          name: nginx-config
+      - name: proxy-template
+        configMap:
+          name: nginx-config
+      - name: default-conf
+        configMap:
+          name: nginx-config

@@ -1,0 +1,129 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: web
+  namespace: dify
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: web
+      component: frontend
+  template:
+    metadata:
+      labels:
+        app: web
+        component: frontend
+    spec:
+      containers:
+      - name: web
+        image: langgenius/dify-web:1.5.1
+        ports:
+        - containerPort: 3000
+          name: web
+        env:
+        - name: CONSOLE_API_URL
+          valueFrom:
+            configMapKeyRef:
+              name: dify-config
+              key: CONSOLE_API_URL
+        - name: APP_API_URL
+          valueFrom:
+            configMapKeyRef:
+              name: dify-config
+              key: APP_API_URL
+        - name: SENTRY_DSN
+          valueFrom:
+            secretKeyRef:
+              name: dify-secret
+              key: WEB_SENTRY_DSN
+        - name: NEXT_TELEMETRY_DISABLED
+          value: "0"
+        - name: TEXT_GENERATION_TIMEOUT_MS
+          valueFrom:
+            configMapKeyRef:
+              name: dify-config
+              key: TEXT_GENERATION_TIMEOUT_MS
+        - name: CSP_WHITELIST
+          valueFrom:
+            configMapKeyRef:
+              name: dify-config
+              key: CSP_WHITELIST
+        - name: ALLOW_EMBED
+          valueFrom:
+            configMapKeyRef:
+              name: dify-config
+              key: ALLOW_EMBED
+        - name: MARKETPLACE_API_URL
+          valueFrom:
+            configMapKeyRef:
+              name: dify-config
+              key: MARKETPLACE_API_URL
+        - name: MARKETPLACE_URL
+          value: "https://marketplace.dify.ai"
+        - name: TOP_K_MAX_VALUE
+          valueFrom:
+            configMapKeyRef:
+              name: dify-config
+              key: TOP_K_MAX_VALUE
+        - name: INDEXING_MAX_SEGMENTATION_TOKENS_LENGTH
+          valueFrom:
+            configMapKeyRef:
+              name: dify-config
+              key: INDEXING_MAX_SEGMENTATION_TOKENS_LENGTH
+        - name: PM2_INSTANCES
+          value: "2"
+        - name: LOOP_NODE_MAX_COUNT
+          valueFrom:
+            configMapKeyRef:
+              name: dify-config
+              key: LOOP_NODE_MAX_COUNT
+        - name: MAX_TOOLS_NUM
+          valueFrom:
+            configMapKeyRef:
+              name: dify-config
+              key: MAX_TOOLS_NUM
+        - name: MAX_PARALLEL_LIMIT
+          valueFrom:
+            configMapKeyRef:
+              name: dify-config
+              key: MAX_PARALLEL_LIMIT
+        - name: MAX_ITERATIONS_NUM
+          valueFrom:
+            configMapKeyRef:
+              name: dify-config
+              key: MAX_ITERATIONS_NUM
+        - name: ENABLE_WEBSITE_JINAREADER
+          valueFrom:
+            configMapKeyRef:
+              name: dify-config
+              key: ENABLE_WEBSITE_JINAREADER
+        - name: ENABLE_WEBSITE_FIRECRAWL
+          valueFrom:
+            configMapKeyRef:
+              name: dify-config
+              key: ENABLE_WEBSITE_FIRECRAWL
+        - name: ENABLE_WEBSITE_WATERCRAWL
+          valueFrom:
+            configMapKeyRef:
+              name: dify-config
+              key: ENABLE_WEBSITE_WATERCRAWL
+        livenessProbe:
+          httpGet:
+            path: /
+            port: 3000
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /
+            port: 3000
+          initialDelaySeconds: 10
+          periodSeconds: 5
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "100m"
+          limits:
+            memory: "1Gi"
+            cpu: "500m"

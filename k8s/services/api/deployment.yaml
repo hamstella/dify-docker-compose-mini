@@ -1,0 +1,100 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: api
+  namespace: dify
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: api
+      component: backend
+  template:
+    metadata:
+      labels:
+        app: api
+        component: backend
+    spec:
+      containers:
+      - name: api
+        image: langgenius/dify-api:1.5.1
+        ports:
+        - containerPort: 5001
+          name: api
+        env:
+        - name: MODE
+          value: "api"
+        - name: SECRET_KEY
+          valueFrom:
+            secretKeyRef:
+              name: dify-secret
+              key: SECRET_KEY
+        - name: INIT_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: dify-secret
+              key: INIT_PASSWORD
+        - name: DB_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: dify-secret
+              key: DB_PASSWORD
+        - name: REDIS_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: dify-secret
+              key: REDIS_PASSWORD
+        - name: WEAVIATE_API_KEY
+          valueFrom:
+            secretKeyRef:
+              name: dify-secret
+              key: WEAVIATE_API_KEY
+        - name: CODE_EXECUTION_API_KEY
+          valueFrom:
+            secretKeyRef:
+              name: dify-secret
+              key: CODE_EXECUTION_API_KEY
+        - name: PLUGIN_DIFY_INNER_API_KEY
+          valueFrom:
+            secretKeyRef:
+              name: dify-secret
+              key: PLUGIN_DIFY_INNER_API_KEY
+        - name: INNER_API_KEY_FOR_PLUGIN
+          valueFrom:
+            secretKeyRef:
+              name: dify-secret
+              key: INNER_API_KEY_FOR_PLUGIN
+        - name: SENTRY_DSN
+          valueFrom:
+            secretKeyRef:
+              name: dify-secret
+              key: API_SENTRY_DSN
+        envFrom:
+        - configMapRef:
+            name: dify-config
+        volumeMounts:
+        - name: storage
+          mountPath: /app/api/storage
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 5001
+          initialDelaySeconds: 60
+          periodSeconds: 30
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 5001
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        resources:
+          requests:
+            memory: "512Mi"
+            cpu: "250m"
+          limits:
+            memory: "2Gi"
+            cpu: "1000m"
+      volumes:
+      - name: storage
+        persistentVolumeClaim:
+          claimName: dify-storage

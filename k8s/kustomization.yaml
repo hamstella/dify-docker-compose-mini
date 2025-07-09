@@ -1,0 +1,47 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+resources:
+  - base/
+  - services/postgres/
+  - services/redis/
+  - services/api/
+  - services/worker/
+  - services/web/
+  - services/sandbox/
+  - services/plugin-daemon/
+  - services/ssrf-proxy/
+  - services/nginx/
+
+# Add secrets that are generated from templates
+patchesStrategicMerge:
+- base/secret.yaml
+- services/postgres/secret.yaml
+- services/redis/secret.yaml
+
+# Add network labels for SSRF proxy network isolation
+patches:
+- target:
+    kind: Deployment
+    name: sandbox
+    namespace: dify
+  patch: |-
+    - op: add
+      path: /spec/template/metadata/labels/network
+      value: ssrf-proxy
+- target:
+    kind: Deployment
+    name: ssrf-proxy
+    namespace: dify
+  patch: |-
+    - op: add
+      path: /spec/template/metadata/labels/network
+      value: ssrf-proxy
+- target:
+    kind: Deployment
+    name: api
+    namespace: dify
+  patch: |-
+    - op: add
+      path: /spec/template/metadata/labels/network
+      value: ssrf-proxy

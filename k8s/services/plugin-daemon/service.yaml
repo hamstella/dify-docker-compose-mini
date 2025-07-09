@@ -1,0 +1,22 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: plugin-daemon
+  namespace: dify
+  labels:
+    app: plugin-daemon
+    component: plugin-manager
+spec:
+  type: ClusterIP
+  ports:
+  - port: 5002
+    targetPort: 5002
+    protocol: TCP
+    name: daemon
+  - port: 5003
+    targetPort: 5003
+    protocol: TCP
+    name: debugging
+  selector:
+    app: plugin-daemon
+    component: plugin-manager

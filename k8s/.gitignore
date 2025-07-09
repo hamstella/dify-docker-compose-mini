@@ -1,0 +1,27 @@
+# Ignore actual secret files with sensitive data
+**/secret.yaml
+
+# Keep example files
+!**/secret.yaml.example
+
+# Ignore any files with sensitive information
+*.key
+*.pem
+*.crt
+*.p12
+*.pfx
+
+# Ignore backup files
+*.backup
+*.bak
+
+# Ignore editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Ignore temporary files
+*.tmp
+*.temp

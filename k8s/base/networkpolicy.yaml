@@ -1,0 +1,43 @@
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: ssrf-proxy-network
+  namespace: dify
+spec:
+  podSelector:
+    matchLabels:
+      network: ssrf-proxy
+  policyTypes:
+  - Ingress
+  - Egress
+  ingress:
+  - from:
+    - podSelector:
+        matchLabels:
+          network: ssrf-proxy
+  egress:
+  - to:
+    - podSelector:
+        matchLabels:
+          network: ssrf-proxy
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: default-deny-external
+  namespace: dify
+spec:
+  podSelector:
+    matchLabels:
+      network: ssrf-proxy
+  policyTypes:
+  - Egress
+  egress:
+  - to:
+    - namespaceSelector: {}
+  - to: []
+    ports:
+    - protocol: TCP
+      port: 53
+    - protocol: UDP
+      port: 53

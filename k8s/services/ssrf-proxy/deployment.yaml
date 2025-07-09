@@ -1,0 +1,73 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ssrf-proxy
+  namespace: dify
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: ssrf-proxy
+      component: proxy
+  template:
+    metadata:
+      labels:
+        app: ssrf-proxy
+        component: proxy
+    spec:
+      containers:
+      - name: ssrf-proxy
+        image: ubuntu/squid:latest
+        ports:
+        - containerPort: 3128
+          name: proxy
+        - containerPort: 8194
+          name: reverse-proxy
+        env:
+        - name: HTTP_PORT
+          value: "3128"
+        - name: COREDUMP_DIR
+          value: "/var/spool/squid"
+        - name: REVERSE_PROXY_PORT
+          value: "8194"
+        - name: SANDBOX_HOST
+          value: "sandbox"
+        - name: SANDBOX_PORT
+          value: "8194"
+        command: ["/bin/sh"]
+        args: ["-c", "cp /config/docker-entrypoint.sh /docker-entrypoint.sh && chmod +x /docker-entrypoint.sh && /docker-entrypoint.sh"]
+        volumeMounts:
+        - name: config
+          mountPath: /config
+        - name: squid-template
+          mountPath: /etc/squid/squid.conf.template
+          subPath: squid.conf.template
+        - name: cache
+          mountPath: /var/spool/squid
+        livenessProbe:
+          tcpSocket:
+            port: 3128
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          tcpSocket:
+            port: 3128
+          initialDelaySeconds: 10
+          periodSeconds: 5
+        resources:
+          requests:
+            memory: "128Mi"
+            cpu: "100m"
+          limits:
+            memory: "256Mi"
+            cpu: "200m"
+      volumes:
+      - name: config
+        configMap:
+          name: ssrf-proxy-config
+          defaultMode: 0755
+      - name: squid-template
+        configMap:
+          name: ssrf-proxy-config
+      - name: cache
+        emptyDir: {}
